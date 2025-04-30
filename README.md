@@ -19,3 +19,6 @@ Options:
   -h, --help             Show this help message
   -s, --source <source>  Specify the source directory to use (Defaults to current directory)
 ```
+
+## License
+This project is licensed under the [MIT License](./LICENSE).
