@@ -22,14 +22,16 @@
 int main(int argc, const char* argv[]) {
     bool reconfigure = false;
     const char* source = NULL;
+    const char* architectures = NULL;
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "--configure") == 0 || strcmp(argv[i], "-c") == 0) reconfigure = true;
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: multi-build [options]\n");
             printf("Options:\n");
-            printf("  -c, --configure        Force reconfiguration of the project (Defaults to false)\n");
-            printf("  -h, --help             Show this help message\n");
-            printf("  -s, --source <source>  Specify the source directory to use (Defaults to current directory)\n");
+            printf("  -a, --architectures <arch>  Specify the architectures to build for macOS (Defaults to default)\n");
+            printf("  -c, --configure             Force reconfiguration of the project (Defaults to false)\n");
+            printf("  -h, --help                  Show this help message\n");
+            printf("  -s, --source <source>       Specify the source directory to use (Defaults to current directory)\n");
             return 0;
         }
         else if (strcmp(argv[i], "--source") == 0 || strcmp(argv[i], "-s") == 0) {
@@ -38,9 +40,13 @@ int main(int argc, const char* argv[]) {
                 i++;
             }
         }
+        else if (strcmp(argv[i], "--architectures") == 0 || strcmp(argv[i], "-a") == 0) {
+            if (i + 1 < argc) {
+                architectures = argv[i + 1];
+                i++;
+            }
+        }
     }
-
-    if (!source) source = ".";
 
     @autoreleasepool {
         NSRect screenRect = [[NSScreen mainScreen] frame];
@@ -55,7 +61,7 @@ int main(int argc, const char* argv[]) {
 
         NSString* windows = [NSString stringWithFormat:@"cmake "
             "-B ./build-win "
-            "-S %s "
+            "%@"
             "-G Ninja "
             "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
@@ -64,10 +70,10 @@ int main(int argc, const char* argv[]) {
             "-DCMAKE_TOOLCHAIN_FILE=$HOME/clang-msvc-sdk/clang-cl-msvc.cmake "
             "-DHOST_ARCH=x86_64 "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source];
+            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
         NSString* android64 = [NSString stringWithFormat:@"cmake "
             "-B ./build-android64 "
-            "-S %s "
+            "%@"
             "-G Ninja "
             "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
@@ -77,10 +83,10 @@ int main(int argc, const char* argv[]) {
             "-DANDROID_PLATFORM=android-23 "
             "-DANDROID_ABI=arm64-v8a "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source];
+            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
         NSString* android32 = [NSString stringWithFormat:@"cmake "
             "-B ./build-android32 "
-            "-S %s "
+            "%@"
             "-G Ninja "
             "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
@@ -90,20 +96,22 @@ int main(int argc, const char* argv[]) {
             "-DANDROID_PLATFORM=android-23 "
             "-DANDROID_ABI=armeabi-v7a "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source];
+            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
         NSString* macos = [NSString stringWithFormat:@"cmake "
             "-B ./build "
-            "-S %s "
+            "%@"
             "-G Ninja "
             "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
             "-DCMAKE_C_COMPILER=/usr/bin/clang "
             "-DCMAKE_CXX_COMPILER=/usr/bin/clang++ "
+            "%@"
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
-            source];
+            source ? [NSString stringWithFormat:@"-S %s ", source] : @"",
+            architectures ? [NSString stringWithFormat:@"'-DCMAKE_OSX_ARCHITECTURES=%s' ", architectures] : @""];
         NSString* ios = [NSString stringWithFormat:@"cmake "
             "-B ./build-ios "
-            "-S %s "
+            "%@"
             "-G Ninja "
             "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
@@ -111,7 +119,7 @@ int main(int argc, const char* argv[]) {
             "-DCMAKE_CXX_COMPILER=/usr/bin/clang++ "
             "-DCMAKE_SYSTEM_NAME=iOS "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source];
+            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
 
         // get the directory this app was launched from
         NSFileManager* fileManager = [NSFileManager defaultManager];
