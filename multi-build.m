@@ -49,6 +49,15 @@ int main(int argc, const char* argv[]) {
     }
 
     @autoreleasepool {
+        // get the directory this app was launched from
+        NSFileManager* fileManager = [NSFileManager defaultManager];
+        NSString* currentDirectory = [fileManager currentDirectoryPath];
+        bool hasWindows = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-win", currentDirectory]];
+        bool hasAndroid64 = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-android64", currentDirectory]];
+        bool hasAndroid32 = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-android32", currentDirectory]];
+        bool hasMacOS = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build", currentDirectory]];
+        bool hasIOS = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-ios", currentDirectory]];
+
         NSRect screenRect = [[NSScreen mainScreen] frame];
         NSRect windowRect = [[NSScreen mainScreen] visibleFrame];
         NSSize size = NSMakeSize(windowRect.size.width / 3.0, windowRect.size.height / 2.0);
@@ -58,6 +67,8 @@ int main(int argc, const char* argv[]) {
         CGFloat x3 = windowRect.size.width - size.width;
         CGFloat y1 = screenRect.size.height - windowRect.size.height - windowRect.origin.y;
         CGFloat y2 = screenRect.size.height - size.height - windowRect.origin.y;
+
+        NSString* sourceArg = source ? [NSString stringWithFormat:@"-S %s ", source] : @"";
 
         NSString* windows = [NSString stringWithFormat:@"cmake "
             "-B ./build-win "
@@ -70,7 +81,7 @@ int main(int argc, const char* argv[]) {
             "-DCMAKE_TOOLCHAIN_FILE=$HOME/clang-msvc-sdk/clang-cl-msvc.cmake "
             "-DHOST_ARCH=x86_64 "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
+            sourceArg];
         NSString* android64 = [NSString stringWithFormat:@"cmake "
             "-B ./build-android64 "
             "%@"
@@ -83,7 +94,7 @@ int main(int argc, const char* argv[]) {
             "-DANDROID_PLATFORM=android-23 "
             "-DANDROID_ABI=arm64-v8a "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
+            sourceArg];
         NSString* android32 = [NSString stringWithFormat:@"cmake "
             "-B ./build-android32 "
             "%@"
@@ -96,7 +107,7 @@ int main(int argc, const char* argv[]) {
             "-DANDROID_PLATFORM=android-23 "
             "-DANDROID_ABI=armeabi-v7a "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
+            sourceArg];
         NSString* macos = [NSString stringWithFormat:@"cmake "
             "-B ./build "
             "%@"
@@ -107,7 +118,7 @@ int main(int argc, const char* argv[]) {
             "-DCMAKE_CXX_COMPILER=/usr/bin/clang++ "
             "%@"
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
-            source ? [NSString stringWithFormat:@"-S %s ", source] : @"",
+            sourceArg,
             architectures ? [NSString stringWithFormat:@"'-DCMAKE_OSX_ARCHITECTURES=%s' ", architectures] : @""];
         NSString* ios = [NSString stringWithFormat:@"cmake "
             "-B ./build-ios "
@@ -119,16 +130,7 @@ int main(int argc, const char* argv[]) {
             "-DCMAKE_CXX_COMPILER=/usr/bin/clang++ "
             "-DCMAKE_SYSTEM_NAME=iOS "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            source ? [NSString stringWithFormat:@"-S %s ", source] : @""];
-
-        // get the directory this app was launched from
-        NSFileManager* fileManager = [NSFileManager defaultManager];
-        NSString* currentDirectory = [fileManager currentDirectoryPath];
-        bool hasWindows = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-win", currentDirectory]];
-        bool hasAndroid64 = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-android64", currentDirectory]];
-        bool hasAndroid32 = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-android32", currentDirectory]];
-        bool hasMacOS = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build", currentDirectory]];
-        bool hasIOS = !reconfigure && [fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@/build-ios", currentDirectory]];
+            sourceArg];
 
         TerminalWindowCreator* creator = [[TerminalWindowCreator alloc] init];
 
