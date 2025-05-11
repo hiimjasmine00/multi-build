@@ -23,12 +23,14 @@ int main(int argc, const char* argv[]) {
     bool reconfigure = false;
     const char* source = NULL;
     const char* architectures = NULL;
+    const char* build = "RelWithDebInfo";
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "--configure") == 0 || strcmp(argv[i], "-c") == 0) reconfigure = true;
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: multi-build [options]\n");
             printf("Options:\n");
             printf("  -a, --architectures <arch>  Specify the architectures to build for macOS (Defaults to default)\n");
+            printf("  -b, --build                 Specify the build configuration (Defaults to RelWithDebInfo)\n");
             printf("  -c, --configure             Force reconfiguration of the project (Defaults to false)\n");
             printf("  -h, --help                  Show this help message\n");
             printf("  -s, --source <source>       Specify the source directory to use (Defaults to current directory)\n");
@@ -43,6 +45,12 @@ int main(int argc, const char* argv[]) {
         else if (strcmp(argv[i], "--architectures") == 0 || strcmp(argv[i], "-a") == 0) {
             if (i + 1 < argc) {
                 architectures = argv[i + 1];
+                i++;
+            }
+        }
+        else if (strcmp(argv[i], "--build") == 0 || strcmp(argv[i], "-b") == 0) {
+            if (i + 1 < argc) {
+                build = argv[i + 1];
                 i++;
             }
         }
@@ -74,19 +82,19 @@ int main(int argc, const char* argv[]) {
             "-B ./build-win "
             "%@"
             "-G Ninja "
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
+            "-DCMAKE_BUILD_TYPE=%s "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
             "-DCMAKE_C_COMPILER=$LLVM_PATH/clang-cl "
             "-DCMAKE_CXX_COMPILER=$LLVM_PATH/clang-cl "
             "-DCMAKE_TOOLCHAIN_FILE=$HOME/clang-msvc-sdk/clang-cl-msvc.cmake "
             "-DHOST_ARCH=x86_64 "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            sourceArg];
+            sourceArg, build];
         NSString* android64 = [NSString stringWithFormat:@"cmake "
             "-B ./build-android64 "
             "%@"
             "-G Ninja "
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
+            "-DCMAKE_BUILD_TYPE=%s "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
             "-DCMAKE_C_COMPILER=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang "
             "-DCMAKE_CXX_COMPILER=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ "
@@ -94,12 +102,12 @@ int main(int argc, const char* argv[]) {
             "-DANDROID_PLATFORM=android-23 "
             "-DANDROID_ABI=arm64-v8a "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            sourceArg];
+            sourceArg, build];
         NSString* android32 = [NSString stringWithFormat:@"cmake "
             "-B ./build-android32 "
             "%@"
             "-G Ninja "
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
+            "-DCMAKE_BUILD_TYPE=%s "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
             "-DCMAKE_C_COMPILER=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang "
             "-DCMAKE_CXX_COMPILER=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ "
@@ -107,52 +115,53 @@ int main(int argc, const char* argv[]) {
             "-DANDROID_PLATFORM=android-23 "
             "-DANDROID_ABI=armeabi-v7a "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            sourceArg];
+            sourceArg, build];
         NSString* macos = [NSString stringWithFormat:@"cmake "
             "-B ./build "
             "%@"
             "-G Ninja "
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
+            "-DCMAKE_BUILD_TYPE=%s "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
             "-DCMAKE_C_COMPILER=/usr/bin/clang "
             "-DCMAKE_CXX_COMPILER=/usr/bin/clang++ "
             "%@"
             "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
             sourceArg,
+            build,
             architectures ? [NSString stringWithFormat:@"'-DCMAKE_OSX_ARCHITECTURES=%s' ", architectures] : @""];
         NSString* ios = [NSString stringWithFormat:@"cmake "
             "-B ./build-ios "
             "%@"
             "-G Ninja "
-            "-DCMAKE_BUILD_TYPE=RelWithDebInfo "
+            "-DCMAKE_BUILD_TYPE=%s "
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON "
             "-DCMAKE_C_COMPILER=/usr/bin/clang "
             "-DCMAKE_CXX_COMPILER=/usr/bin/clang++ "
             "-DCMAKE_SYSTEM_NAME=iOS "
             "-DGEODE_DONT_INSTALL_MODS=ON",
-            sourceArg];
+            sourceArg, build];
 
         TerminalWindowCreator* creator = [[TerminalWindowCreator alloc] init];
 
         [creator withRectangle:NSMakeRect(x1, y1, size.width, size.height) andScript:hasWindows ?
-            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-win --config RelWithDebInfo", currentDirectory] :
-            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-win --config RelWithDebInfo", currentDirectory, windows]];
+            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-win --config %s", currentDirectory, build] :
+            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-win --config %s", currentDirectory, windows, build]];
 
         [creator withRectangle:NSMakeRect(x2, y1, size.width, size.height) andScript:hasAndroid64 ?
-            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-android64 --config RelWithDebInfo", currentDirectory] :
-            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-android64 --config RelWithDebInfo", currentDirectory, android64]];
+            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-android64 --config %s", currentDirectory, build] :
+            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-android64 --config %s", currentDirectory, android64, build]];
 
         [creator withRectangle:NSMakeRect(x3, y1, size.width, size.height) andScript:hasAndroid32 ?
-            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-android32 --config RelWithDebInfo", currentDirectory] :
-            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-android32 --config RelWithDebInfo", currentDirectory, android32]];
+            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-android32 --config %s", currentDirectory, build] :
+            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-android32 --config %s", currentDirectory, android32, build]];
 
         [creator withRectangle:NSMakeRect(x1, y2, size.width, size.height) andScript:hasMacOS ?
-            [NSString stringWithFormat:@"cd %@ && cmake --build ./build --config RelWithDebInfo", currentDirectory] :
-            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build --config RelWithDebInfo", currentDirectory, macos]];
+            [NSString stringWithFormat:@"cd %@ && cmake --build ./build --config %s", currentDirectory, build] :
+            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build --config %s", currentDirectory, macos, build]];
 
         [creator withRectangle:NSMakeRect(x2, y2, size.width, size.height) andScript:hasIOS ?
-            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-ios --config RelWithDebInfo", currentDirectory] :
-            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-ios --config RelWithDebInfo", currentDirectory, ios]];
+            [NSString stringWithFormat:@"cd %@ && cmake --build ./build-ios --config %s", currentDirectory, build] :
+            [NSString stringWithFormat:@"cd %@ && %@ && cmake --build ./build-ios --config %s", currentDirectory, ios, build]];
 
         [creator withRectangle:NSMakeRect(x3, y2, size.width, size.height) andScript:[NSString stringWithFormat:@"cd %@", currentDirectory]];
     }
